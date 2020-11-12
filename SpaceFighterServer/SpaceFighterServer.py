@@ -1,87 +1,103 @@
 from Server import Server
+from Ship import Ship
+import socket
+import pickle
 import threading
 import multiprocessing as mp
-import pickle
+import random
+import sys
 
 class SpaceFighterServer:
     def __init__(self):
-        self.message_queue = mp.Queue()
-        self.server = Server(self.message_queue)
-        self.server.wait_for_connection()
-        self.server.wait_for_connection()
-        self.player_one = ServerShip(300, 650, 50, 50)
-        self.player_two = ServerShip(300, 650, 50, 50)
-        self.start()
+        random.seed()
+        self.server = Server() #eventually Server(<ip address>, <port>, <total players?>)
+        self.total_connections = 0
+        self.players = []
 
-    def start(self):
-        lobby = threading.Thread(target=self.create_lobby, args=(self.message_queue, ))
-        lobby.start()
+    def start(self, total_players):
+        while self.total_connections < total_players:
+            self.wait_for_connection()
 
-    def create_lobby(self, message_queue):
-        while self.server.total_connections == 2:
-            self.update_clients()
-            if not message_queue.empty():
-                message = message_queue.get()
-                self.handle_message(message)
+    def wait_for_connection(self):
+        print('waiting for player...')
+        conn, addr = self.server.network.accept()
+        id = self.total_connections
+        thread = threading.Thread(target=self.handle_connection, args=(conn, addr, id))
+        self.total_connections += 1
+        thread.start()
 
-    def handle_message(self, message):
-        if message.get('user') == 0:
-            operation = message.get('msg').get('type')
-            if operation == 'move':
-                print(f'user: 0\nmessage: {message}\noperation: {operation}')
-                direction = message.get('msg').get('info')
-                #location = self.server.decode_message(encoded_location)
-                self.player_one.move(direction)
-        if message.get('user') == 1:
-            operation = message.get('msg').get('type')
-            if operation == 'move':
-                print(f'user: 1\nmessage: {message}\noperation: {operation}')
-                direction = message.get('msg').get('info')
-                self.player_two.move(direction)
+    def handle_connection(self, conn, addr, user_id):
+        print(f'{addr[0]} connected to the server')
+        connected = True
+        while connected:
+            encoded_message = conn.recv(self.server.HEADER)
+            if encoded_message != b'':
+                decoded_message = self.decode_message(encoded_message)
+                return_message = None
+                if decoded_message.type == 'cmd':
+                    if 'server' in decoded_message.message:
+                        command_info = decoded_message.message.get('server')
+                        if command_info.get('command') == self.server.DISCONNECT_MESSAGE:
+                            self.remove_player_with_id(command_info.get('id'))
+                            connected = False
+                            self.total_connections -= 1
+                    else:
+                        return_message = self.handle_command(decoded_message)
+                if decoded_message.type == 'pos':
+                    return_message = self.handle_movement(decoded_message)
 
-    def update_clients(self):
-        if self.player_one.has_moved or self.player_two.has_moved:
-            message = {'type': 'pos', 'info': {'p1': self.server.encode_message({'x': self.player_one.x, 'y': self.player_one.y}),
-                                            'p2': self.server.encode_message({'x': self.player_two.x, 'y': self.player_two.y})}}
-            encoded_message = self.server.encode_message(message)
-            self.server.update(message)
-            self.player_one.has_moved = False
-            self.player_two.has_moved = False
+                if return_message != None:
+                    conn.sendall(self.encode_message(return_message))
+
+        conn.close()
+
+    def handle_movement(self, message):
+        new_player = message.message
+        old_player = self.get_player_with_id(new_player.id)
+        self.players.remove(old_player)
+        self.players.append(new_player)
+        return self.server.create_message('positions', self.players)
+
+    def handle_command(self, message):
+        command = message.message
+        if 'server' in command:
+            command_info = command.get('server')
+            if command_info.get('command') == self.server.DISCONNECT_MESSAGE:
+                self.remove_player_with_id(command_info.get('id'))
+                connected = False
+                self.total_connections -= 1
+        if 'start' in command:
+            start_info = command.get('start')
+            username = start_info.get('username')
+            id = start_info.get('id')
+            x = y = random.randrange(50, 700)
+            new_player = Ship(username, id, (x, y), (50, 50), 'basic')
+            self.players.append(new_player)
+            print('There are now {} players'.format(len(self.players)))
+            return self.server.create_message('start', new_player)
+        else:
+            return None
+
+    def remove_player_with_id(self, id):
+        for player in self.players:
+            if player.id == id:
+                self.players.remove(player)
+
+    def get_player_with_id(self, id):
+        for player in self.players:
+            if player.id == id:
+                return player
 
 
-class NetworkMessage:
-    def __init__(self, user, type, message):
-        self.type = type
-        self.message = message
-        self.info = self.server.encode_message(message) if self.type == 'pos' else self.message
-        self.msg = {'msg': {
-            'user': user,
-            'type': self.type,
-            'info': self.info,
-        }}
+    def update(self, message):
+        self.send(self.encode_message(message))
 
-class ServerShip:
-    def __init__(self, x, y, width, height):
-        self.has_moved = False
-        self.x = x
-        self.y = y
-        self.width = width
-        self.height = height
-        self.starting_lives = 3
-        self.movement_speed = 6
+    def send(self, message):
+        for conn in self.connections:
+            conn.send(message)
 
-    def move(self, direction):
-        self.has_moved = True
-        if direction == 'left':
-            next_location = self.x - self.movement_speed
-            if next_location > 0:
-                self.x -= self.movement_speed
-        elif direction == 'right':
-            next_location = self.x + self.movement_speed
-            if next_location < 750 - self.width:
-                self.x += self.movement_speed
+    def decode_message(self, message):
+        return pickle.loads(message)
 
-    def get_position(self):
-        return {'x': self.x, 'y': self.y}
-
-s = SpaceFighterServer()
+    def encode_message(self, message):
+        return pickle.dumps(message)

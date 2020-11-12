@@ -1,23 +1,33 @@
+from SpaceFighterClient import SpaceFighterClient
+from SpaceFighterShipManager import SpaceFighterShipManager
+import sys
+from Ship import Ship
 import pygame
-import os, time, random, sys
-import multiprocessing as mp
+import time
 
-from Client import Client
-from SpaceFighterPlayerHandler import SpaceFighterPlayerHandler as SFPlayerHandler
+    # self.client = SpaceFighterClient()
+    # self.username = 'fart knocker'
+    # self.id = uuid.uuid4()
+    # info = {'start': {'username' : self.username, 'id': self.id}}
+    # results = self.client.send_message('cmd', info)
+    # ship = results.message if results.type == 'start' else None
+    # if ship != None:
+    #     print(ship.to_string())
+    # self.client.client.disconnect()
+
 
 class SpaceFighterCore:
     def __init__(self):
+        username = input('Enter a username: ')
         pygame.init()
-        self.WIDTH = 750
-        self.HEIGHT = 750
+        self.WIDTH = 950
+        self.HEIGHT = 950
         self.WIN = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
-        pygame.display.set_caption('Space Fighter v0.4')
+        pygame.display.set_caption('Space Fighter v0.6')
 
-        self.movement_queue = mp.Queue()
-        self.player_handler = SFPlayerHandler(self.movement_queue)
-
-        self.client = Client(self.movement_queue)
-        self.client.connect()
+        self.client = SpaceFighterClient(username)
+        self.ship_manager = SpaceFighterShipManager(self.client)
+        self.run()
 
     def run(self):
         print('Starting game')
@@ -26,19 +36,13 @@ class SpaceFighterCore:
         clock = pygame.time.Clock()
 
         def redraw_window():
+            #print('redrawing')
             self.WIN.fill((0,0,0))
-
-            self.player_handler.render(self.WIN)
-
+            self.ship_manager.render(self.WIN)
             pygame.display.update()
 
         def update():
-            if not self.movement_queue.empty():
-                message = self.movement_queue.get()
-                if message.get('type') == 'pos':
-                    self.player_handler.process_network_message(self.client, message.get('info'))
-                if message.get('type') == 'attack':
-                    pass
+            self.ship_manager.update()
 
         while running:
             clock.tick(FPS)
@@ -47,17 +51,10 @@ class SpaceFighterCore:
                     self.client.disconnect()
                     running = False
                     sys.exit()
+                if event.type == pygame.MOUSEBUTTONUP:
+                    #if time.time() - self.ship_manager.last_shot > 2:
+                    self.ship_manager.player.shoot()
+                        #self.ship_manager.last_shot = time.time()
 
             update()
             redraw_window()
-
-            keys = pygame.key.get_pressed()
-            if keys[pygame.K_a]: #left
-                client_message = self.client.create_message('move', 'left')
-                self.client.send(client_message)
-            if keys[pygame.K_d]: #left
-                client_message = self.client.create_message('move', 'right')
-                self.client.send(client_message)
-            if keys[pygame.K_SPACE]: #shoot
-                client_message = self.client.create_message('attack', '')
-                self.client.send(client_message)

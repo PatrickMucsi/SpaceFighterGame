@@ -1,4 +1,4 @@
-from SpaceFighterServer import SpaceFighterServer
+from SpaceFighterServer import SpaceFighterServer as SFServer
 
-instance = SpaceFighterServer()
-instance.update_clients()
+server = SFServer()
+server.start(2)
