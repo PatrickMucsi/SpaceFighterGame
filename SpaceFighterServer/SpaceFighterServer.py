@@ -1,5 +1,5 @@
 from Server import Server
-from Ship import Ship
+from Objects.Ship import Ship
 import socket
 import pickle
 import threading
@@ -14,7 +14,7 @@ class SpaceFighterServer:
         self.total_connections = 0
         self.players = []
 
-    def start(self, total_players):
+    def start(self, total_players=1000):
         while self.total_connections < total_players:
             self.wait_for_connection()
 

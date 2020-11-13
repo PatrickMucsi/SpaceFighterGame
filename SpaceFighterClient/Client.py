@@ -8,7 +8,7 @@ class Client:
     def __init__(self):
         self.HEADER = 2048 * 4
         self.PORT = 5050
-        self.SERVER = '192.168.56.1'# input("input ip: ")
+        self.SERVER = '47.42.150.73'# input("input ip: ")
         self.DISCONNECT_MESSAGE = '!DISCONNECT'
         self.ADDR = (self.SERVER, self.PORT)
 

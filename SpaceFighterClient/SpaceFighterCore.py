@@ -1,7 +1,8 @@
 from SpaceFighterClient import SpaceFighterClient
 from SpaceFighterShipManager import SpaceFighterShipManager
+from Objects.SpaceFighterHUD import SpaceFighterHUD
+import SpaceFighterTools as SFTools
 import sys
-from Ship import Ship
 import pygame
 import time
 
@@ -27,6 +28,8 @@ class SpaceFighterCore:
 
         self.client = SpaceFighterClient(username)
         self.ship_manager = SpaceFighterShipManager(self.client)
+        self.HUD = SpaceFighterHUD(self.ship_manager.player)
+        self.background = SFTools.scale_image(SFTools.load_image('assets', 'background.png'), 950, 850)
         self.run()
 
     def run(self):
@@ -38,11 +41,14 @@ class SpaceFighterCore:
         def redraw_window():
             #print('redrawing')
             self.WIN.fill((0,0,0))
+            #self.WIN.blit(self.background, (0,0))
             self.ship_manager.render(self.WIN)
+            self.HUD.render(self.WIN)
             pygame.display.update()
 
         def update():
             self.ship_manager.update()
+            self.HUD.update()
 
         while running:
             clock.tick(FPS)
@@ -53,7 +59,7 @@ class SpaceFighterCore:
                     sys.exit()
                 if event.type == pygame.MOUSEBUTTONUP:
                     #if time.time() - self.ship_manager.last_shot > 2:
-                    self.ship_manager.player.shoot()
+                    self.ship_manager.player.shoot('none')
                         #self.ship_manager.last_shot = time.time()
 
             update()
