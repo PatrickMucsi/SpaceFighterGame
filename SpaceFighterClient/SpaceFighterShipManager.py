@@ -1,8 +1,5 @@
-from SpaceFighterClient import SpaceFighterClient
 import SpaceFighterTools as SFTools
 import Objects.SpaceFighterHUD as SFHUD
-import sys
-from Objects.Ship import Ship
 import pygame
 import time
 import random

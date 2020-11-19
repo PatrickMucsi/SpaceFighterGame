@@ -8,7 +8,7 @@ class Server:
     def __init__(self):
         self.HEADER = 2048 * 4
         self.PORT = 5050
-        self.SERVER = '47.42.150.73'#socket.gethostbyname(socket.gethostname())
+        self.SERVER = '192.168.1.18'#socket.gethostbyname(socket.gethostname())
         self.network = None
         self.ADDR = (self.SERVER, self.PORT)
         self.DISCONNECT_MESSAGE = '!DISCONNECT'

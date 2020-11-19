@@ -6,17 +6,6 @@ import sys
 import pygame
 import time
 
-    # self.client = SpaceFighterClient()
-    # self.username = 'fart knocker'
-    # self.id = uuid.uuid4()
-    # info = {'start': {'username' : self.username, 'id': self.id}}
-    # results = self.client.send_message('cmd', info)
-    # ship = results.message if results.type == 'start' else None
-    # if ship != None:
-    #     print(ship.to_string())
-    # self.client.client.disconnect()
-
-
 class SpaceFighterCore:
     def __init__(self):
         username = input('Enter a username: ')
@@ -29,7 +18,7 @@ class SpaceFighterCore:
         self.client = SpaceFighterClient(username)
         self.ship_manager = SpaceFighterShipManager(self.client)
         self.HUD = SpaceFighterHUD(self.ship_manager.player)
-        self.background = SFTools.scale_image(SFTools.load_image('assets', 'background.png'), 950, 850)
+        self.background = SFTools.load_image('assets', 'background.png')
         self.run()
 
     def run(self):
@@ -39,9 +28,7 @@ class SpaceFighterCore:
         clock = pygame.time.Clock()
 
         def redraw_window():
-            #print('redrawing')
-            self.WIN.fill((0,0,0))
-            #self.WIN.blit(self.background, (0,0))
+            self.WIN.blit(self.background, (0,0))
             self.ship_manager.render(self.WIN)
             self.HUD.render(self.WIN)
             pygame.display.update()
@@ -58,9 +45,7 @@ class SpaceFighterCore:
                     running = False
                     sys.exit()
                 if event.type == pygame.MOUSEBUTTONUP:
-                    #if time.time() - self.ship_manager.last_shot > 2:
                     self.ship_manager.player.shoot('none')
-                        #self.ship_manager.last_shot = time.time()
 
             update()
             redraw_window()
